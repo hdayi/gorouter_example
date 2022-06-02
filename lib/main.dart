@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gorouter_example/home.dart';
+import 'package:gorouter_example/my_storage.dart';
 import 'package:gorouter_example/other.dart';
 
 import 'login.dart';
@@ -19,18 +20,21 @@ class LoginInfo with ChangeNotifier {
 }
 
 class MyApp extends StatelessWidget {
-  MyApp({super.key}) {
-    //loginInfo = LoginInfo();
-  }
-  static LoginInfo loginInfo = LoginInfo();
+  MyApp({super.key});
+  // static LoginInfo loginInfo = LoginInfo();
 
   final _router = GoRouter(
     initialLocation: '/',
     urlPathStrategy: UrlPathStrategy.path,
     refreshListenable: loginInfo,
     redirect: (state) {
+      if (_snapshot.connectionState == ConnectionState.waiting ||
+          !_snapshot.hasData) {
+        return '/splash';
+      }
+
       var isLoggingIn = state.location == '/login';
-      var isLoggedIn = loginInfo.isLoggedIn;
+      var isLoggedIn = (_snapshot.data as String).isNotEmpty;
 
       if (!isLoggedIn && !isLoggingIn) return '/login';
       if (isLoggedIn && isLoggingIn) return '/';
@@ -87,17 +91,23 @@ class MyApp extends StatelessWidget {
       );
     },
   );
-
+  static late AsyncSnapshot<String?> _snapshot;
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      routeInformationParser: _router.routeInformationParser,
-      routerDelegate: _router.routerDelegate,
+    return FutureBuilder(
+      future: MyStorage.getToken(),
+      builder: (BuildContext context, AsyncSnapshot<String?> snapshot) {
+        _snapshot = snapshot;
+        return MaterialApp.router(
+          title: 'Flutter Demo',
+          theme: ThemeData(
+            primarySwatch: Colors.blue,
+          ),
+          routeInformationParser: _router.routeInformationParser,
+          routerDelegate: _router.routerDelegate,
+        );
+      },
     );
   }
 }
